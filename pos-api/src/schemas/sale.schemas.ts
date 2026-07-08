@@ -6,7 +6,7 @@ export const createSaleSchema = z.object({
       z.object({
         productId: z.number().int().positive(),
         quantity: z.number().int().positive(),
-      })
+      }),
     )
     .min(1),
   employeeId: z.number().int().positive(),

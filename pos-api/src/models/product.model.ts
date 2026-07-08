@@ -1,4 +1,10 @@
-import { pgTable, serial, varchar, integer, numeric } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  serial,
+  varchar,
+  integer,
+  numeric,
+} from "drizzle-orm/pg-core";
 import { category } from "./category.model";
 
 export const product = pgTable("product", {
@@ -9,4 +15,3 @@ export const product = pgTable("product", {
   price: numeric("price", { precision: 10, scale: 2 }).notNull(), // never float for money
   categoryId: integer("category_id").references(() => category.categoryId),
 });
-

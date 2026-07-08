@@ -20,4 +20,3 @@ app.listen({ port, host: "0.0.0.0" }, (err) => {
     process.exit(1);
   }
 });
-

@@ -7,4 +7,3 @@ export * from "./sale.model";
 export * from "./saleItem.model";
 export * from "./stock.model";
 export * from "./refund.model";
-

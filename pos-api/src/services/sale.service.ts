@@ -16,23 +16,38 @@ export const saleService = {
     customerId?: number;
   }) {
     return db.transaction(async (trx) => {
-      // Look up price + stock for every product first, so the whole sale
-      // can be validated and priced before anything is written.
-      const lineItems: { productRow: typeof product.$inferSelect; quantity: number; unitPrice: number }[] = [];
+      // Validate all products exist and have enough stock, and prepare line items for insertion.
+      const lineItems: {
+        productRow: typeof product.$inferSelect;
+        quantity: number;
+        unitPrice: number;
+      }[] = [];
       for (const item of data.items) {
-        const [productRow] = await trx.select().from(product).where(eq(product.productId, item.productId));
+        const [productRow] = await trx
+          .select()
+          .from(product)
+          .where(eq(product.productId, item.productId));
         if (!productRow) throw new Error(`Product ${item.productId} not found`);
         if (productRow.stockQuantity < item.quantity) {
           throw new Error(
-            `Not enough stock for "${productRow.name}" (have ${productRow.stockQuantity}, need ${item.quantity})`
+            `Not enough stock for "${productRow.name}" (have ${productRow.stockQuantity}, need ${item.quantity})`,
           );
         }
-        lineItems.push({ productRow, quantity: item.quantity, unitPrice: Number(productRow.price) });
+        lineItems.push({
+          productRow,
+          quantity: item.quantity,
+          unitPrice: Number(productRow.price),
+        });
       }
 
-      const totalAmount = lineItems.reduce((sum, li) => sum + li.unitPrice * li.quantity, 0);
+      const totalAmount = lineItems.reduce(
+        (sum, li) => sum + li.unitPrice * li.quantity,
+        0,
+      );
       if (data.amountPaid < totalAmount) {
-        throw new Error(`Amount paid (${data.amountPaid}) is less than total (${totalAmount})`);
+        throw new Error(
+          `Amount paid (${data.amountPaid}) is less than total (${totalAmount})`,
+        );
       }
 
       const [newSale] = await trx
@@ -55,8 +70,7 @@ export const saleService = {
           unitPrice: li.unitPrice.toString(),
         });
 
-        // Same audit-log pattern as everywhere else: adjust the running
-        // total on product, and write a signed row to stock explaining why.
+        // Deduct the sold quantity from stock and log the change in the stock ledger.
         await trx
           .update(product)
           .set({ stockQuantity: li.productRow.stockQuantity - li.quantity })
@@ -81,7 +95,10 @@ export const saleService = {
     const [found] = await db.select().from(sale).where(eq(sale.saleId, saleId));
     if (!found) throw new Error("Sale not found");
 
-    const items = await db.select().from(saleItem).where(eq(saleItem.saleId, saleId));
+    const items = await db
+      .select()
+      .from(saleItem)
+      .where(eq(saleItem.saleId, saleId));
     return { ...found, items };
   },
 };

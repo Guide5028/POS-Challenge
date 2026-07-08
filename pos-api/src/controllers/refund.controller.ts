@@ -9,7 +9,12 @@ const createRefund = async (request: FastifyRequest, reply: FastifyReply) => {
 
   try {
     const { saleItemId, quantity, reason, employeeId } = parsed.data;
-    const refund = await refundService.createRefund(saleItemId, quantity, reason, employeeId);
+    const refund = await refundService.createRefund(
+      saleItemId,
+      quantity,
+      reason,
+      employeeId,
+    );
     return sendSuccess(reply, refund, 201);
   } catch (error) {
     return sendError(reply, 400, (error as Error).message);

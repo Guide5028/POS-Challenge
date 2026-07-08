@@ -1,4 +1,3 @@
-// TODO: Zod validation schemas for auth requests
 import { z } from "zod";
 
 export const loginSchema = z.object({
@@ -11,4 +10,3 @@ export const registerSchema = z.object({
   password: z.string().min(6),
   name: z.string().min(1),
 });
-

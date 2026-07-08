@@ -72,7 +72,11 @@ export const productController = {
     if (!parsed.success) return sendError(reply, 400, parsed.error.message);
 
     try {
-      const updated = await productService.updateStock(id, parsed.data.changeAmount, parsed.data.reason);
+      const updated = await productService.updateStock(
+        id,
+        parsed.data.changeAmount,
+        parsed.data.reason,
+      );
       return sendSuccess(reply, updated);
     } catch (error) {
       return sendError(reply, 400, (error as Error).message);

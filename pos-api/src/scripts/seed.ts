@@ -5,8 +5,6 @@ import { hashPassword } from "../utils/password";
 import { eq } from "drizzle-orm";
 
 // One-off script to bootstrap the first admin + cashier accounts.
-// There's no public "become an admin" endpoint on purpose — this is the
-// only way the very first admin gets created. Run with: npm run db:seed
 const accounts = [
   { name: "Admin User", email: "admin@pos.com", password: "Admin@12345", role: "admin" as const },
   { name: "Cashier User", email: "cashier@pos.com", password: "Cashier@12345", role: "cashier" as const },

@@ -9,7 +9,10 @@ export const authController = {
     if (!parsed.success) return sendError(reply, 400, parsed.error.message);
 
     try {
-      const result = await authService.login(parsed.data.email, parsed.data.password);
+      const result = await authService.login(
+        parsed.data.email,
+        parsed.data.password,
+      );
       reply.send(result); // { accessToken, refreshToken, profile }
     } catch (error) {
       reply.status(401).send({ error: "Invalid credentials" });
@@ -23,9 +26,13 @@ export const authController = {
     try {
       const { email, password, name } = parsed.data;
       const profile = await authService.register(email, password, name);
-      reply.status(201).send({ message: "Employee registered successfully", profile });
+      reply
+        .status(201)
+        .send({ message: "Employee registered successfully", profile });
     } catch (error) {
-      reply.status(400).send({ error: (error as Error).message || "Registration failed" });
+      reply
+        .status(400)
+        .send({ error: (error as Error).message || "Registration failed" });
     }
   },
 

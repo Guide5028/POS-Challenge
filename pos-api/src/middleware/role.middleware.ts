@@ -8,4 +8,4 @@ export function requireRole(allowedRoles: string[]): preHandlerHookHandler {
       return sendError(reply, 403, "Forbidden: Insufficient role");
     }
   };
-} 
+}

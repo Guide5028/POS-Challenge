@@ -2,12 +2,15 @@ import { db } from "../db/client";
 import { employee } from "../models/employee.model";
 import { eq } from "drizzle-orm";
 import { comparePasswords, hashPassword } from "../utils/password";
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt";
 import crypto from "crypto";
 
 export const authService = {
   async login(email: string, password: string) {
-    // Drizzle query: eq(column, value) is a function, not a method on the column.
     const [existingEmployee] = await db
       .select()
       .from(employee)
@@ -19,7 +22,7 @@ export const authService = {
 
     const passwordMatches = await comparePasswords(
       password,
-      existingEmployee.passwordHash
+      existingEmployee.passwordHash,
     );
     if (!passwordMatches) {
       throw new Error("Invalid credentials");
@@ -54,10 +57,6 @@ export const authService = {
     }
 
     const passwordHash = await hashPassword(password);
-
-    // role is intentionally left out here — it defaults to 'cashier' in the
-    // DB schema. Promoting someone to 'admin' should go through an
-    // admin-only employee-management endpoint, not open self-registration.
     const [created] = await db
       .insert(employee)
       .values({ email, passwordHash, name })
@@ -72,12 +71,8 @@ export const authService = {
   },
 
   async refreshToken(token: string) {
-    // Throws if expired or signed with the wrong secret — caught by the
-    // controller and turned into a 401.
     const decoded = verifyRefreshToken(token);
-
-    // Re-issue a fresh access token with the same identity claims, but a
-    // new sessionId so it's distinguishable from the original login.
+    // If the token is invalid or expired, verifyRefreshToken will throw an error.
     return signAccessToken({
       userId: decoded.userId,
       email: decoded.email,
@@ -87,7 +82,10 @@ export const authService = {
   },
 
   async getProfile(employeeId: number) {
-    const [found] = await db.select().from(employee).where(eq(employee.employeeId, employeeId));
+    const [found] = await db
+      .select()
+      .from(employee)
+      .where(eq(employee.employeeId, employeeId));
     if (!found) throw new Error("Employee not found");
 
     return {

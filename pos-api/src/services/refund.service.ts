@@ -6,21 +6,31 @@ import { product } from "../models/product.model";
 import { stock } from "../models/stock.model";
 
 export const refundService = {
-  async createRefund(saleItemId: number, quantity: number, reason: string, employeeId: number) {
+  async createRefund(
+    saleItemId: number,
+    quantity: number,
+    reason: string,
+    employeeId: number,
+  ) {
     return db.transaction(async (trx) => {
-      const [item] = await trx.select().from(saleItem).where(eq(saleItem.saleItemId, saleItemId));
+      const [item] = await trx
+        .select()
+        .from(saleItem)
+        .where(eq(saleItem.saleItemId, saleItemId));
       if (!item) throw new Error("Sale item not found");
 
-      // Support partial refunds: sum whatever's already been refunded on
-      // this line item, so someone can't refund more than was ever sold.
       const [{ alreadyRefunded }] = await trx
-        .select({ alreadyRefunded: sql<number>`coalesce(sum(${refund.quantity}), 0)` })
+        .select({
+          alreadyRefunded: sql<number>`coalesce(sum(${refund.quantity}), 0)`,
+        })
         .from(refund)
         .where(eq(refund.saleItemId, saleItemId));
 
       const remaining = item.quantity - Number(alreadyRefunded);
       if (quantity > remaining) {
-        throw new Error(`Cannot refund ${quantity} — only ${remaining} left on this line item`);
+        throw new Error(
+          `Cannot refund ${quantity} — only ${remaining} left on this line item`,
+        );
       }
 
       const [createdRefund] = await trx
@@ -28,7 +38,10 @@ export const refundService = {
         .values({ saleItemId, quantity, reason, employeeId })
         .returning();
 
-      const [productRow] = await trx.select().from(product).where(eq(product.productId, item.productId));
+      const [productRow] = await trx
+        .select()
+        .from(product)
+        .where(eq(product.productId, item.productId));
       if (productRow) {
         await trx
           .update(product)

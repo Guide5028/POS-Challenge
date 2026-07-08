@@ -19,8 +19,10 @@ const sortColumns = {
 export const productService = {
   async getAllProducts(params: ListParams = {}) {
     const conditions = [];
-    if (params.categoryId) conditions.push(eq(product.categoryId, params.categoryId));
-    if (params.search) conditions.push(ilike(product.name, `%${params.search}%`));
+    if (params.categoryId)
+      conditions.push(eq(product.categoryId, params.categoryId));
+    if (params.search)
+      conditions.push(ilike(product.name, `%${params.search}%`));
 
     const orderColumn = sortColumns[params.sortBy ?? "name"];
     const orderFn = params.order === "desc" ? desc : asc;
@@ -34,7 +36,10 @@ export const productService = {
 
   async getProductById(productId: number) {
     // Drizzle comparisons are eq(column, value) — not column.eq(value).
-    const [found] = await db.select().from(product).where(eq(product.productId, productId));
+    const [found] = await db
+      .select()
+      .from(product)
+      .where(eq(product.productId, productId));
     if (!found) throw new Error("Product not found");
     return found;
   },
@@ -67,7 +72,7 @@ export const productService = {
       price: number;
       stockQuantity: number;
       categoryId: number;
-    }>
+    }>,
   ) {
     const updateValues: Record<string, unknown> = { ...data };
     if (data.price !== undefined) updateValues.price = data.price.toString();
@@ -82,14 +87,20 @@ export const productService = {
   },
 
   async deleteProduct(productId: number) {
-    const [deleted] = await db.delete(product).where(eq(product.productId, productId)).returning();
+    const [deleted] = await db
+      .delete(product)
+      .where(eq(product.productId, productId))
+      .returning();
     if (!deleted) throw new Error("Product not found");
     return deleted;
   },
 
   async updateStock(productId: number, changeAmount: number, reason: string) {
     return db.transaction(async (trx) => {
-      const [current] = await trx.select().from(product).where(eq(product.productId, productId));
+      const [current] = await trx
+        .select()
+        .from(product)
+        .where(eq(product.productId, productId));
       if (!current) throw new Error("Product not found");
 
       const newQuantity = current.stockQuantity + changeAmount;

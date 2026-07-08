@@ -11,7 +11,10 @@ export const createProductSchema = z.object({
 export const updateProductSchema = createProductSchema.partial();
 
 export const updateStockSchema = z.object({
-  changeAmount: z.number().int().refine((v) => v !== 0, "changeAmount cannot be 0"),
+  changeAmount: z
+    .number()
+    .int()
+    .refine((v) => v !== 0, "changeAmount cannot be 0"),
   reason: z.enum(["restock", "damage", "correction"]),
 });
 
