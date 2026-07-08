@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { authService } from "../services/auth.service";
-import { sendError } from "../utils/response";
+import { sendSuccess, sendError } from "../utils/response";
 import { loginSchema, registerSchema } from "../schemas/auth.schemas";
 
 export const authController = {
@@ -13,9 +13,9 @@ export const authController = {
         parsed.data.email,
         parsed.data.password,
       );
-      reply.send(result); // { accessToken, refreshToken, profile }
+      return sendSuccess(reply, result); // data: { accessToken, refreshToken, profile }
     } catch (error) {
-      reply.status(401).send({ error: "Invalid credentials" });
+      return sendError(reply, 401, "Wrong email or password");
     }
   },
 
@@ -26,13 +26,9 @@ export const authController = {
     try {
       const { email, password, name } = parsed.data;
       const profile = await authService.register(email, password, name);
-      reply
-        .status(201)
-        .send({ message: "Employee registered successfully", profile });
+      return sendSuccess(reply, profile, 201);
     } catch (error) {
-      reply
-        .status(400)
-        .send({ error: (error as Error).message || "Registration failed" });
+      return sendError(reply, 400, (error as Error).message || "Registration failed");
     }
   },
 
@@ -40,16 +36,16 @@ export const authController = {
     try {
       const { refreshToken } = request.body as { refreshToken: string };
       const newAccessToken = await authService.refreshToken(refreshToken);
-      reply.send({ accessToken: newAccessToken });
+      return sendSuccess(reply, { accessToken: newAccessToken });
     } catch (error) {
-      reply.status(401).send({ error: "Invalid refresh token" });
+      return sendError(reply, 401, "Invalid refresh token");
     }
   },
 
   logout: async (request: FastifyRequest, reply: FastifyReply) => {
     // For stateless JWT, logout is typically handled on the client side by deleting the token.
     // If you want to implement server-side token invalidation, you would need to maintain a blacklist of tokens.
-    reply.send({ message: "Logged out successfully" });
+    return sendSuccess(reply, { message: "Logged out successfully" });
   },
 
   getProfile: async (request: FastifyRequest, reply: FastifyReply) => {
@@ -57,9 +53,9 @@ export const authController = {
       // request.user is set by the authenticate preHandler — this route
       // only runs if that already succeeded.
       const profile = await authService.getProfile(request.user!.userId);
-      reply.send(profile);
+      return sendSuccess(reply, profile);
     } catch (error) {
-      reply.status(404).send({ error: (error as Error).message });
+      return sendError(reply, 404, (error as Error).message);
     }
   },
 };

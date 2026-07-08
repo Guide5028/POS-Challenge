@@ -8,6 +8,20 @@ import {
   listProductsQuerySchema,
 } from "../schemas/product.schemas";
 
+// Shared guard: request.params.id always arrives as a string. If it's not
+// a real number (typo, wrong path, someone hitting /products/search
+// expecting a search route that doesn't exist), fail fast with a clean
+// 400 instead of letting NaN reach the database and blow up as a raw
+// Postgres error.
+function parseId(request: FastifyRequest, reply: FastifyReply): number | null {
+  const id = Number((request.params as { id: string }).id);
+  if (Number.isNaN(id)) {
+    sendError(reply, 400, "Invalid product id — must be a number");
+    return null;
+  }
+  return id;
+}
+
 export const productController = {
   getAllProducts: async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = listProductsQuerySchema.safeParse(request.query);
@@ -22,7 +36,9 @@ export const productController = {
   },
 
   getProductById: async (request: FastifyRequest, reply: FastifyReply) => {
-    const id = Number((request.params as { id: string }).id);
+    const id = parseId(request, reply);
+    if (id === null) return;
+
     try {
       const found = await productService.getProductById(id);
       return sendSuccess(reply, found);
@@ -44,7 +60,9 @@ export const productController = {
   },
 
   updateProduct: async (request: FastifyRequest, reply: FastifyReply) => {
-    const id = Number((request.params as { id: string }).id);
+    const id = parseId(request, reply);
+    if (id === null) return;
+
     const parsed = updateProductSchema.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.message);
 
@@ -57,7 +75,9 @@ export const productController = {
   },
 
   deleteProduct: async (request: FastifyRequest, reply: FastifyReply) => {
-    const id = Number((request.params as { id: string }).id);
+    const id = parseId(request, reply);
+    if (id === null) return;
+
     try {
       await productService.deleteProduct(id);
       return sendSuccess(reply, { message: "Product deleted successfully" });
@@ -67,7 +87,9 @@ export const productController = {
   },
 
   updateStock: async (request: FastifyRequest, reply: FastifyReply) => {
-    const id = Number((request.params as { id: string }).id);
+    const id = parseId(request, reply);
+    if (id === null) return;
+
     const parsed = updateStockSchema.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.message);
 

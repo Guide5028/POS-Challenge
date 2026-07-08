@@ -6,7 +6,7 @@ export const authenticate: preHandlerHookHandler = async (req, reply) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return sendError(reply, 401, "Missing or invalid Authorization header");
+    return sendError(reply, 401, "Login first");
   }
 
   const token = authHeader.split(" ")[1];
