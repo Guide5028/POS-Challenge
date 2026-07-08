@@ -10,7 +10,7 @@ if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
 export interface TokenPayload {
   userId: number;
   email: string;
-  role: "admin" | "cashier" | "manager";
+  role: "admin" | "cashier";
   sessionId: string;
 }
 

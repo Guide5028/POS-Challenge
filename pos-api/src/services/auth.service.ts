@@ -2,7 +2,7 @@ import { db } from "../db/client";
 import { employee } from "../models/employee.model";
 import { eq } from "drizzle-orm";
 import { comparePasswords, hashPassword } from "../utils/password";
-import { signAccessToken, signRefreshToken } from "../utils/jwt";
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 import crypto from "crypto";
 
 export const authService = {
@@ -28,7 +28,7 @@ export const authService = {
     const payload = {
       userId: existingEmployee.employeeId,
       email: existingEmployee.email,
-      role: existingEmployee.role as "admin" | "cashier" | "manager",
+      role: existingEmployee.role as "admin" | "cashier",
       sessionId: crypto.randomUUID(),
     };
 
@@ -68,6 +68,33 @@ export const authService = {
       name: created.name,
       email: created.email,
       role: created.role,
+    };
+  },
+
+  async refreshToken(token: string) {
+    // Throws if expired or signed with the wrong secret — caught by the
+    // controller and turned into a 401.
+    const decoded = verifyRefreshToken(token);
+
+    // Re-issue a fresh access token with the same identity claims, but a
+    // new sessionId so it's distinguishable from the original login.
+    return signAccessToken({
+      userId: decoded.userId,
+      email: decoded.email,
+      role: decoded.role,
+      sessionId: crypto.randomUUID(),
+    });
+  },
+
+  async getProfile(employeeId: number) {
+    const [found] = await db.select().from(employee).where(eq(employee.employeeId, employeeId));
+    if (!found) throw new Error("Employee not found");
+
+    return {
+      employeeId: found.employeeId,
+      name: found.name,
+      email: found.email,
+      role: found.role,
     };
   },
 };

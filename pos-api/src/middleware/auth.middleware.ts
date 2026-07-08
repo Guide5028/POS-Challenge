@@ -20,11 +20,3 @@ export const authenticate: preHandlerHookHandler = async (req, reply) => {
 
   req.user = payload;
 };
-
-export function requireRole(allowedRoles: string[]): preHandlerHookHandler {
-  return async (req, reply) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return sendError(reply, 403, "Forbidden: Insufficient role");
-    }
-  };
-} 

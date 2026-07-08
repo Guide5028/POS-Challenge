@@ -1,16 +1,23 @@
-// TODO: Zod validation schemas for product requests
 import { z } from "zod";
 
 export const createProductSchema = z.object({
   name: z.string().min(1),
-  description: z.string().optional(),
+  barcode: z.string().optional(),
   price: z.number().positive(),
-  categoryId: z.number().int().positive(),
+  stockQuantity: z.number().int().min(0).default(0),
+  categoryId: z.number().int().optional(),
 });
 
-export const updateProductSchema = z.object({
-  name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  price: z.number().positive().optional(),
-  categoryId: z.number().int().positive().optional(),
+export const updateProductSchema = createProductSchema.partial();
+
+export const updateStockSchema = z.object({
+  changeAmount: z.number().int().refine((v) => v !== 0, "changeAmount cannot be 0"),
+  reason: z.enum(["restock", "damage", "correction"]),
+});
+
+export const listProductsQuerySchema = z.object({
+  categoryId: z.coerce.number().int().optional(),
+  search: z.string().optional(),
+  sortBy: z.enum(["name", "price", "stockQuantity"]).optional(),
+  order: z.enum(["asc", "desc"]).optional(),
 });
