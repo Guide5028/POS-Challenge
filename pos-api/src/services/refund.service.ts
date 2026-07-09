@@ -34,7 +34,7 @@ export const refundService = {
 
       const [createdRefund] = await trx
         .insert(refund)
-        .values({ saleItemId, quantity, reason, employeeId })
+        .values({ saleItemId, saleId: item.saleId, quantity, reason, employeeId })
         .returning();
 
       // put the stock back by logging a positive change

@@ -22,7 +22,9 @@ export const promotionController = {
     if (!parsed.success) return sendError(reply, 400, parsed.error.message);
 
     try {
-      const promotions = await promotionService.getAllPromotions(parsed.data.activeOnly);
+      const promotions = await promotionService.getAllPromotions(
+        parsed.data.activeOnly,
+      );
       return sendSuccess(reply, promotions);
     } catch (error) {
       return sendError(reply, 500, "Failed to fetch promotions");

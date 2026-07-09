@@ -13,14 +13,20 @@ const baseSchema = z
     endDate: z.coerce.date(),
     isActive: z.boolean().optional(),
   })
-  .refine((data) => data.discountType !== "percentage" || data.discountValue <= 100, {
-    message: "discountValue must be <= 100 when discountType is 'percentage'",
-    path: ["discountValue"],
-  })
-  .refine((data) => data.scope !== "category" || data.categoryId !== undefined, {
-    message: "categoryId is required when scope is 'category'",
-    path: ["categoryId"],
-  })
+  .refine(
+    (data) => data.discountType !== "percentage" || data.discountValue <= 100,
+    {
+      message: "discountValue must be <= 100 when discountType is 'percentage'",
+      path: ["discountValue"],
+    },
+  )
+  .refine(
+    (data) => data.scope !== "category" || data.categoryId !== undefined,
+    {
+      message: "categoryId is required when scope is 'category'",
+      path: ["categoryId"],
+    },
+  )
   .refine((data) => data.scope !== "product" || data.productId !== undefined, {
     message: "productId is required when scope is 'product'",
     path: ["productId"],

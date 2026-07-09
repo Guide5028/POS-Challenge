@@ -5,11 +5,14 @@ export const createProductSchema = z.object({
   barcode: z.string().optional(),
   price: z.number().positive(),
   stockQuantity: z.number().int().min(0).default(0),
+  costPrice: z.number().positive().optional(), // what you paid, for initial stock
   category: z.string().optional(),
 });
 
 // updates can't touch stockQuantity directly — use /stock instead
-export const updateProductSchema = createProductSchema.omit({ stockQuantity: true }).partial();
+export const updateProductSchema = createProductSchema
+  .omit({ stockQuantity: true, costPrice: true })
+  .partial();
 
 export const updateStockSchema = z.object({
   changeAmount: z
@@ -17,6 +20,7 @@ export const updateStockSchema = z.object({
     .int()
     .refine((v) => v !== 0, "changeAmount cannot be 0"),
   reason: z.enum(["restock", "damage", "correction"]),
+  costPrice: z.number().positive().optional(), // relevant when reason is "restock"
 });
 
 export const listProductsQuerySchema = z.object({

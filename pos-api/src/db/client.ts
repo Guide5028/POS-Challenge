@@ -11,8 +11,5 @@ if (!connectionString) {
 const queryClient = postgres(connectionString, { prepare: false });
 export const db = drizzle(queryClient, { schema });
 
-// `db` and the `trx` from db.transaction() are different TS types even
-// though they behave the same at runtime, so helpers that need to work with
-// either one should take `DbOrTx`, not `typeof db`.
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type DbOrTx = typeof db | Transaction;

@@ -30,12 +30,18 @@ export function computeDiscountAmount(
 
 export const promotionService = {
   async getAllPromotions(activeOnly = false) {
-    const rows = await db.select().from(promotion).orderBy(desc(promotion.createdAt));
+    const rows = await db
+      .select()
+      .from(promotion)
+      .orderBy(desc(promotion.createdAt));
     if (!activeOnly) return rows;
 
     const now = new Date();
     return rows.filter(
-      (p) => p.isActive && new Date(p.startDate) <= now && new Date(p.endDate) >= now,
+      (p) =>
+        p.isActive &&
+        new Date(p.startDate) <= now &&
+        new Date(p.endDate) >= now,
     );
   },
 
@@ -77,12 +83,18 @@ export const promotionService = {
     return created;
   },
 
-  async updatePromotion(promotionId: number, data: Partial<CreatePromotionInput>) {
+  async updatePromotion(
+    promotionId: number,
+    data: Partial<CreatePromotionInput>,
+  ) {
     const updateValues: Record<string, unknown> = {
       name: data.name,
       description: data.description,
       discountType: data.discountType,
-      discountValue: data.discountValue !== undefined ? data.discountValue.toString() : undefined,
+      discountValue:
+        data.discountValue !== undefined
+          ? data.discountValue.toString()
+          : undefined,
       scope: data.scope,
       categoryId: data.categoryId,
       productId: data.productId,
@@ -123,12 +135,21 @@ export const promotionService = {
     const scopeMatch = categoryId
       ? or(
           eq(promotion.scope, "all"),
-          and(eq(promotion.scope, "category"), eq(promotion.categoryId, categoryId)),
-          and(eq(promotion.scope, "product"), eq(promotion.productId, productId)),
+          and(
+            eq(promotion.scope, "category"),
+            eq(promotion.categoryId, categoryId),
+          ),
+          and(
+            eq(promotion.scope, "product"),
+            eq(promotion.productId, productId),
+          ),
         )
       : or(
           eq(promotion.scope, "all"),
-          and(eq(promotion.scope, "product"), eq(promotion.productId, productId)),
+          and(
+            eq(promotion.scope, "product"),
+            eq(promotion.productId, productId),
+          ),
         );
 
     const candidates = await executor
@@ -145,10 +166,11 @@ export const promotionService = {
 
     if (candidates.length === 0) return null;
 
-    // most specific scope wins (product > category > all); ties go to the
-    // bigger discountValue, which isn't perfectly fair across % vs $ but is
-    // good enough here
-    const specificity: Record<string, number> = { product: 3, category: 2, all: 1 };
+    const specificity: Record<string, number> = {
+      product: 3,
+      category: 2,
+      all: 1,
+    };
     candidates.sort((a, b) => {
       const specDiff = specificity[b.scope] - specificity[a.scope];
       if (specDiff !== 0) return specDiff;

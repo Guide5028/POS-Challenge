@@ -101,6 +101,7 @@ export const productService = {
     price: number;
     category?: string;
     stockQuantity?: number;
+    costPrice?: number;
   }) {
     return db.transaction(async (trx) => {
       const categoryId = data.category
@@ -124,6 +125,7 @@ export const productService = {
           productId: created.productId,
           changeAmount: initialStock,
           reason: "restock",
+          costPrice: data.costPrice?.toString(),
         });
       }
 
@@ -182,7 +184,12 @@ export const productService = {
     return deleted;
   },
 
-  async updateStock(productId: number, changeAmount: number, reason: string) {
+  async updateStock(
+    productId: number,
+    changeAmount: number,
+    reason: string,
+    costPrice?: number,
+  ) {
     return db.transaction(async (trx) => {
       const [current] = await trx
         .select()
@@ -194,9 +201,12 @@ export const productService = {
       const newQuantity = currentStock + changeAmount;
       if (newQuantity < 0) throw new Error("Stock cannot go below 0");
 
-      await trx
-        .insert(stockHistory)
-        .values({ productId, changeAmount, reason });
+      await trx.insert(stockHistory).values({
+        productId,
+        changeAmount,
+        reason,
+        costPrice: costPrice?.toString(),
+      });
 
       return { ...current, stockQuantity: newQuantity };
     });

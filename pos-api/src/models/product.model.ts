@@ -1,4 +1,10 @@
-import { pgTable, serial, varchar, numeric, integer } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  serial,
+  varchar,
+  numeric,
+  integer,
+} from "drizzle-orm/pg-core";
 import { category } from "./category.model";
 
 export const product = pgTable("product", {
@@ -7,6 +13,4 @@ export const product = pgTable("product", {
   barcode: varchar("barcode", { length: 50 }).unique(),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(), // numeric, not float — money
   categoryId: integer("category_id").references(() => category.categoryId),
-  // no stockQuantity here on purpose — stock is always sum(changeAmount)
-  // from stock_history, so it can't drift from the actual history
 });

@@ -9,7 +9,6 @@ import {
 } from "../schemas/product.schemas";
 
 // params.id is always a string — bail out early with a clean 400 if it's
-// not actually a number instead of letting NaN hit the database
 function parseId(request: FastifyRequest, reply: FastifyReply): number | null {
   const id = Number((request.params as { id: string }).id);
   if (Number.isNaN(id)) {
@@ -95,6 +94,7 @@ export const productController = {
         id,
         parsed.data.changeAmount,
         parsed.data.reason,
+        parsed.data.costPrice,
       );
       return sendSuccess(reply, updated);
     } catch (error) {
