@@ -1,67 +1,138 @@
-import { eq, and, ilike, asc, desc } from "drizzle-orm";
-import { db } from "../db/client";
+import { eq, and, ilike, sql } from "drizzle-orm";
+import { db, DbOrTx } from "../db/client";
 import { product } from "../models/product.model";
-import { stock } from "../models/stock.model";
+import { category } from "../models/category.model";
+import { stockHistory } from "../models/stockHistory.model";
 
 type ListParams = {
-  categoryId?: number;
+  category?: string;
   search?: string;
   sortBy?: "name" | "price" | "stockQuantity";
   order?: "asc" | "desc";
 };
 
-const sortColumns = {
-  name: product.name,
-  price: product.price,
-  stockQuantity: product.stockQuantity,
-};
+// sums stock_history for a product to get its current quantity
+async function getCurrentStock(
+  executor: DbOrTx,
+  productId: number,
+): Promise<number> {
+  const [row] = await executor
+    .select({
+      total: sql<number>`coalesce(sum(${stockHistory.changeAmount}), 0)`,
+    })
+    .from(stockHistory)
+    .where(eq(stockHistory.productId, productId));
+  return Number(row?.total ?? 0);
+}
+
+// case-insensitive find, or create if it's a new category name
+async function findOrCreateCategoryId(
+  executor: DbOrTx,
+  name: string,
+): Promise<number> {
+  const trimmed = name.trim();
+  const [existing] = await executor
+    .select()
+    .from(category)
+    .where(ilike(category.name, trimmed));
+  if (existing) return existing.categoryId;
+
+  const [created] = await executor
+    .insert(category)
+    .values({ name: trimmed })
+    .returning();
+  return created.categoryId;
+}
 
 export const productService = {
   async getAllProducts(params: ListParams = {}) {
     const conditions = [];
-    if (params.categoryId)
-      conditions.push(eq(product.categoryId, params.categoryId));
+    if (params.category) conditions.push(ilike(category.name, params.category));
     if (params.search)
       conditions.push(ilike(product.name, `%${params.search}%`));
 
-    const orderColumn = sortColumns[params.sortBy ?? "name"];
-    const orderFn = params.order === "desc" ? desc : asc;
-
-    return db
-      .select()
+    const rows = await db
+      .select({
+        productId: product.productId,
+        name: product.name,
+        barcode: product.barcode,
+        price: product.price,
+        category: category.name,
+        stockQuantity: sql<number>`coalesce(sum(${stockHistory.changeAmount}), 0)`,
+      })
       .from(product)
+      .leftJoin(category, eq(product.categoryId, category.categoryId))
+      .leftJoin(stockHistory, eq(stockHistory.productId, product.productId))
       .where(conditions.length ? and(...conditions) : undefined)
-      .orderBy(orderFn(orderColumn));
+      .groupBy(product.productId, category.name);
+
+    // default sort: name ascending
+    const field = params.sortBy ?? "name";
+    const dir = params.order === "desc" ? -1 : 1;
+    return rows.slice().sort((a, b) => {
+      if (field === "name") return a.name.localeCompare(b.name) * dir;
+      const av = field === "price" ? Number(a.price) : Number(a.stockQuantity);
+      const bv = field === "price" ? Number(b.price) : Number(b.stockQuantity);
+      return (av - bv) * dir;
+    });
   },
 
   async getProductById(productId: number) {
-    // Drizzle comparisons are eq(column, value) — not column.eq(value).
     const [found] = await db
-      .select()
+      .select({
+        productId: product.productId,
+        name: product.name,
+        barcode: product.barcode,
+        price: product.price,
+        category: category.name,
+      })
       .from(product)
+      .leftJoin(category, eq(product.categoryId, category.categoryId))
       .where(eq(product.productId, productId));
     if (!found) throw new Error("Product not found");
-    return found;
+
+    const stockQuantity = await getCurrentStock(db, productId);
+    return { ...found, stockQuantity };
   },
 
   async createProduct(data: {
     name: string;
     barcode?: string;
     price: number;
+    category?: string;
     stockQuantity?: number;
-    categoryId?: number;
   }) {
-    const [created] = await db
-      .insert(product)
-      .values({
-        name: data.name,
-        barcode: data.barcode,
-        price: data.price.toString(),
-        stockQuantity: data.stockQuantity ?? 0,
-        categoryId: data.categoryId,
-      })
-      .returning();
-    return created;
+    return db.transaction(async (trx) => {
+      const categoryId = data.category
+        ? await findOrCreateCategoryId(trx, data.category)
+        : undefined;
+
+      const [created] = await trx
+        .insert(product)
+        .values({
+          name: data.name,
+          barcode: data.barcode,
+          price: data.price.toString(),
+          categoryId,
+        })
+        .returning();
+
+      // starting stock, if any, goes into stock_history like everything else
+      const initialStock = data.stockQuantity ?? 0;
+      if (initialStock > 0) {
+        await trx.insert(stockHistory).values({
+          productId: created.productId,
+          changeAmount: initialStock,
+          reason: "restock",
+        });
+      }
+
+      return {
+        ...created,
+        category: data.category ?? null,
+        stockQuantity: initialStock,
+      };
+    });
   },
 
   async updateProduct(
@@ -70,20 +141,36 @@ export const productService = {
       name: string;
       barcode: string;
       price: number;
-      stockQuantity: number;
-      categoryId: number;
+      category: string;
     }>,
   ) {
-    const updateValues: Record<string, unknown> = { ...data };
-    if (data.price !== undefined) updateValues.price = data.price.toString();
+    return db.transaction(async (trx) => {
+      const updateValues: Record<string, unknown> = {
+        name: data.name,
+        barcode: data.barcode,
+        price: data.price !== undefined ? data.price.toString() : undefined,
+      };
+      if (data.category !== undefined) {
+        updateValues.categoryId = await findOrCreateCategoryId(
+          trx,
+          data.category,
+        );
+      }
+      // strip undefined keys so we don't overwrite fields that weren't sent
+      Object.keys(updateValues).forEach(
+        (k) => updateValues[k] === undefined && delete updateValues[k],
+      );
 
-    const [updated] = await db
-      .update(product)
-      .set(updateValues)
-      .where(eq(product.productId, productId))
-      .returning();
-    if (!updated) throw new Error("Product not found");
-    return updated;
+      const [updated] = await trx
+        .update(product)
+        .set(updateValues)
+        .where(eq(product.productId, productId))
+        .returning();
+      if (!updated) throw new Error("Product not found");
+
+      const stockQuantity = await getCurrentStock(trx, productId);
+      return { ...updated, category: data.category ?? null, stockQuantity };
+    });
   },
 
   async deleteProduct(productId: number) {
@@ -103,18 +190,15 @@ export const productService = {
         .where(eq(product.productId, productId));
       if (!current) throw new Error("Product not found");
 
-      const newQuantity = current.stockQuantity + changeAmount;
+      const currentStock = await getCurrentStock(trx, productId);
+      const newQuantity = currentStock + changeAmount;
       if (newQuantity < 0) throw new Error("Stock cannot go below 0");
 
-      const [updated] = await trx
-        .update(product)
-        .set({ stockQuantity: newQuantity })
-        .where(eq(product.productId, productId))
-        .returning();
+      await trx
+        .insert(stockHistory)
+        .values({ productId, changeAmount, reason });
 
-      await trx.insert(stock).values({ productId, changeAmount, reason });
-
-      return updated;
+      return { ...current, stockQuantity: newQuantity };
     });
   },
 };

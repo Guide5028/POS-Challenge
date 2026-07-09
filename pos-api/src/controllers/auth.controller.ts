@@ -13,7 +13,7 @@ export const authController = {
         parsed.data.email,
         parsed.data.password,
       );
-      return sendSuccess(reply, result); // data: { accessToken, refreshToken, profile }
+      return sendSuccess(reply, result);
     } catch (error) {
       return sendError(reply, 401, "Wrong email or password");
     }
@@ -43,15 +43,13 @@ export const authController = {
   },
 
   logout: async (request: FastifyRequest, reply: FastifyReply) => {
-    // For stateless JWT, logout is typically handled on the client side by deleting the token.
-    // If you want to implement server-side token invalidation, you would need to maintain a blacklist of tokens.
+    // JWT is stateless — client just deletes the token. No blacklist yet.
     return sendSuccess(reply, { message: "Logged out successfully" });
   },
 
   getProfile: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      // request.user is set by the authenticate preHandler — this route
-      // only runs if that already succeeded.
+      // request.user is set by the authenticate preHandler before this runs
       const profile = await authService.getProfile(request.user!.userId);
       return sendSuccess(reply, profile);
     } catch (error) {

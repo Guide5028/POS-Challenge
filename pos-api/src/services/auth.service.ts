@@ -71,8 +71,7 @@ export const authService = {
   },
 
   async refreshToken(token: string) {
-    const decoded = verifyRefreshToken(token);
-    // If the token is invalid or expired, verifyRefreshToken will throw an error.
+    const decoded = verifyRefreshToken(token); // throws if invalid/expired
     return signAccessToken({
       userId: decoded.userId,
       email: decoded.email,

@@ -2,8 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { refund } from "../models/refund.model";
 import { saleItem } from "../models/saleItem.model";
-import { product } from "../models/product.model";
-import { stock } from "../models/stock.model";
+import { stockHistory } from "../models/stockHistory.model";
 
 export const refundService = {
   async createRefund(
@@ -38,20 +37,8 @@ export const refundService = {
         .values({ saleItemId, quantity, reason, employeeId })
         .returning();
 
-      const [productRow] = await trx
-        .select()
-        .from(product)
-        .where(eq(product.productId, item.productId));
-      if (productRow) {
-        await trx
-          .update(product)
-          .set({ stockQuantity: productRow.stockQuantity + quantity })
-          .where(eq(product.productId, item.productId));
-      }
-
-      // Refunded stock goes back on the shelf — logged with a positive
-      // changeAmount so the ledger shows exactly why it went up.
-      await trx.insert(stock).values({
+      // put the stock back by logging a positive change
+      await trx.insert(stockHistory).values({
         productId: item.productId,
         changeAmount: quantity,
         reason: "refund",

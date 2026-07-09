@@ -5,10 +5,11 @@ export const createProductSchema = z.object({
   barcode: z.string().optional(),
   price: z.number().positive(),
   stockQuantity: z.number().int().min(0).default(0),
-  categoryId: z.number().int().optional(),
+  category: z.string().optional(),
 });
 
-export const updateProductSchema = createProductSchema.partial();
+// updates can't touch stockQuantity directly — use /stock instead
+export const updateProductSchema = createProductSchema.omit({ stockQuantity: true }).partial();
 
 export const updateStockSchema = z.object({
   changeAmount: z
@@ -19,7 +20,7 @@ export const updateStockSchema = z.object({
 });
 
 export const listProductsQuerySchema = z.object({
-  categoryId: z.coerce.number().int().optional(),
+  category: z.string().optional(),
   search: z.string().optional(),
   sortBy: z.enum(["name", "price", "stockQuantity"]).optional(),
   order: z.enum(["asc", "desc"]).optional(),

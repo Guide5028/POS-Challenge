@@ -8,11 +8,8 @@ import {
   listProductsQuerySchema,
 } from "../schemas/product.schemas";
 
-// Shared guard: request.params.id always arrives as a string. If it's not
-// a real number (typo, wrong path, someone hitting /products/search
-// expecting a search route that doesn't exist), fail fast with a clean
-// 400 instead of letting NaN reach the database and blow up as a raw
-// Postgres error.
+// params.id is always a string — bail out early with a clean 400 if it's
+// not actually a number instead of letting NaN hit the database
 function parseId(request: FastifyRequest, reply: FastifyReply): number | null {
   const id = Number((request.params as { id: string }).id);
   if (Number.isNaN(id)) {

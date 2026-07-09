@@ -1,9 +1,10 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { sale } from "../models/sale.model";
 import { saleItem } from "../models/saleItem.model";
-import { stock } from "../models/stock.model";
+import { stockHistory } from "../models/stockHistory.model";
 import { product } from "../models/product.model";
+import { promotionService, computeDiscountAmount } from "./promotion.service";
 
 type SaleItemInput = { productId: number; quantity: number };
 
@@ -16,11 +17,13 @@ export const saleService = {
     customerId?: number;
   }) {
     return db.transaction(async (trx) => {
-      // Validate all products exist and have enough stock, and prepare line items for insertion.
+      // check each product exists, has enough stock, and if a promo applies
       const lineItems: {
         productRow: typeof product.$inferSelect;
         quantity: number;
         unitPrice: number;
+        promotionId: number | null;
+        discountAmount: number;
       }[] = [];
       for (const item of data.items) {
         const [productRow] = await trx
@@ -28,20 +31,44 @@ export const saleService = {
           .from(product)
           .where(eq(product.productId, item.productId));
         if (!productRow) throw new Error(`Product ${item.productId} not found`);
-        if (productRow.stockQuantity < item.quantity) {
+
+        const [{ currentStock }] = await trx
+          .select({
+            currentStock: sql<number>`coalesce(sum(${stockHistory.changeAmount}), 0)`,
+          })
+          .from(stockHistory)
+          .where(eq(stockHistory.productId, item.productId));
+
+        if (Number(currentStock) < item.quantity) {
           throw new Error(
-            `Not enough stock for "${productRow.name}" (have ${productRow.stockQuantity}, need ${item.quantity})`,
+            `Not enough stock for "${productRow.name}" (have ${currentStock}, need ${item.quantity})`,
           );
         }
+
+        const unitPrice = Number(productRow.price);
+        const lineSubtotal = unitPrice * item.quantity;
+
+        // discount is decided here server-side — the client never sends one
+        const bestPromo = await promotionService.getBestPromotionForProduct(
+          trx,
+          productRow.productId,
+          productRow.categoryId,
+        );
+        const discountAmount = bestPromo
+          ? computeDiscountAmount(bestPromo, lineSubtotal)
+          : 0;
+
         lineItems.push({
           productRow,
           quantity: item.quantity,
-          unitPrice: Number(productRow.price),
+          unitPrice,
+          promotionId: bestPromo ? bestPromo.promotionId : null,
+          discountAmount,
         });
       }
 
       const totalAmount = lineItems.reduce(
-        (sum, li) => sum + li.unitPrice * li.quantity,
+        (sum, li) => sum + li.unitPrice * li.quantity - li.discountAmount,
         0,
       );
       if (data.amountPaid < totalAmount) {
@@ -68,15 +95,12 @@ export const saleService = {
           productId: li.productRow.productId,
           quantity: li.quantity,
           unitPrice: li.unitPrice.toString(),
+          promotionId: li.promotionId ?? undefined,
+          discountAmount: li.discountAmount.toString(),
         });
 
-        // Deduct the sold quantity from stock and log the change in the stock ledger.
-        await trx
-          .update(product)
-          .set({ stockQuantity: li.productRow.stockQuantity - li.quantity })
-          .where(eq(product.productId, li.productRow.productId));
-
-        await trx.insert(stock).values({
+        // stock goes down by adding a new ledger row, not editing a column
+        await trx.insert(stockHistory).values({
           productId: li.productRow.productId,
           changeAmount: -li.quantity,
           reason: "sale",

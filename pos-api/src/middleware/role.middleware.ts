@@ -1,4 +1,3 @@
-// TODO: block request unless request.user.role matches an allowed role
 import { preHandlerHookHandler } from "fastify";
 import { sendError } from "../utils/response";
 
