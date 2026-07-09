@@ -95,6 +95,25 @@ export const productService = {
     return { ...found, stockQuantity };
   },
 
+  // exact match by barcode — this is what a scanner hits at checkout
+  async getProductByBarcode(barcode: string) {
+    const [found] = await db
+      .select({
+        productId: product.productId,
+        name: product.name,
+        barcode: product.barcode,
+        price: product.price,
+        category: category.name,
+      })
+      .from(product)
+      .leftJoin(category, eq(product.categoryId, category.categoryId))
+      .where(eq(product.barcode, barcode));
+    if (!found) throw new Error("Product not found");
+
+    const stockQuantity = await getCurrentStock(db, found.productId);
+    return { ...found, stockQuantity };
+  },
+
   async createProduct(data: {
     name: string;
     barcode?: string;

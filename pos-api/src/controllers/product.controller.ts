@@ -43,6 +43,17 @@ export const productController = {
     }
   },
 
+  getProductByBarcode: async (request: FastifyRequest, reply: FastifyReply) => {
+    const { barcode } = request.params as { barcode: string };
+
+    try {
+      const found = await productService.getProductByBarcode(barcode);
+      return sendSuccess(reply, found);
+    } catch (error) {
+      return sendError(reply, 404, (error as Error).message);
+    }
+  },
+
   createProduct: async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = createProductSchema.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.message);

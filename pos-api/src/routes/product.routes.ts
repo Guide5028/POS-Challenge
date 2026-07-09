@@ -14,6 +14,12 @@ const productRoutes = (app: FastifyInstance) => {
     { preHandler: [authenticate] },
     productController.getProductById,
   );
+  // scanner-friendly lookup — exact barcode match, used at checkout
+  app.get(
+    "/barcode/:barcode",
+    { preHandler: [authenticate] },
+    productController.getProductByBarcode,
+  );
   app.post(
     "/",
     { preHandler: [authenticate, requireRole(["admin"])] },
