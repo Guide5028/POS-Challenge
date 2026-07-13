@@ -15,6 +15,31 @@ type CreatePromotionInput = {
   isActive?: boolean;
 };
 
+//promotion 1 free 1 
+export function computeBuyOneGetOneFreeDiscount(
+  lineSubtotal: number,
+  quantity: number,
+): number {
+  if (quantity < 2) return 0; // No discount if less than 2 items
+  const freeItems = Math.floor(quantity / 2);
+  const discountAmount = (lineSubtotal / quantity) * freeItems;
+  return Math.round(discountAmount * 100) / 100; // Round to two decimal places
+}
+
+//promotion buy x get y free
+export function computeBuyXGetYFreeDiscount(
+  lineSubtotal: number,
+  quantity: number,
+  x: number,
+  y: number,
+): number {
+  if (quantity < x) return 0; // No discount if less than x items
+  const eligibleSets = Math.floor(quantity / (x + y));
+  const freeItems = eligibleSets * y;
+  const discountAmount = (lineSubtotal / quantity) * freeItems;
+  return Math.round(discountAmount * 100) / 100; // Round to two decimal places
+}
+
 // turns "20% off" or "$5 off" into an actual dollar amount for one line
 export function computeDiscountAmount(
   promo: { discountType: string; discountValue: string | number },
