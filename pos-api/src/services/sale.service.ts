@@ -31,6 +31,9 @@ export const saleService = {
           .from(product)
           .where(eq(product.productId, item.productId));
         if (!productRow) throw new Error(`Product ${item.productId} not found`);
+        if (!productRow.isActive) {
+          throw new Error(`"${productRow.name}" is not available for sale`);
+        }
 
         const [{ currentStock }] = await trx
           .select({

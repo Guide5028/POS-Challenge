@@ -113,7 +113,8 @@ export const productService = {
       .from(product)
       .leftJoin(category, eq(product.categoryId, category.categoryId))
       .where(eq(product.barcode, barcode));
-    if (!found) throw new Error("Product not found");
+    // treat inactive products as invisible to the scanner, same as the catalog list
+    if (!found || !found.isActive) throw new Error("Product not found");
 
     const stockQuantity = await getCurrentStock(db, found.productId);
     return { ...found, stockQuantity };
