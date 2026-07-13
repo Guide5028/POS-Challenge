@@ -9,6 +9,7 @@ type ListParams = {
   search?: string;
   sortBy?: "name" | "price" | "stockQuantity";
   order?: "asc" | "desc";
+  activeOnly?: boolean;
 };
 
 // sums stock_history for a product to get its current quantity
@@ -50,6 +51,7 @@ export const productService = {
     if (params.category) conditions.push(ilike(category.name, params.category));
     if (params.search)
       conditions.push(ilike(product.name, `%${params.search}%`));
+    if (params.activeOnly) conditions.push(eq(product.isActive, true));
 
     const rows = await db
       .select({
@@ -58,6 +60,7 @@ export const productService = {
         barcode: product.barcode,
         price: product.price,
         category: category.name,
+        isActive: product.isActive,
         stockQuantity: sql<number>`coalesce(sum(${stockHistory.changeAmount}), 0)`,
       })
       .from(product)
@@ -85,6 +88,7 @@ export const productService = {
         barcode: product.barcode,
         price: product.price,
         category: category.name,
+        isActive: product.isActive,
       })
       .from(product)
       .leftJoin(category, eq(product.categoryId, category.categoryId))
@@ -104,6 +108,7 @@ export const productService = {
         barcode: product.barcode,
         price: product.price,
         category: category.name,
+        isActive: product.isActive,
       })
       .from(product)
       .leftJoin(category, eq(product.categoryId, category.categoryId))
@@ -121,6 +126,7 @@ export const productService = {
     category?: string;
     stockQuantity?: number;
     costPrice?: number;
+    isActive?: boolean;
   }) {
     return db.transaction(async (trx) => {
       const categoryId = data.category
@@ -134,6 +140,7 @@ export const productService = {
           barcode: data.barcode,
           price: data.price.toString(),
           categoryId,
+          isActive: data.isActive ?? true,
         })
         .returning();
 
@@ -163,6 +170,7 @@ export const productService = {
       barcode: string;
       price: number;
       category: string;
+      isActive: boolean;
     }>,
   ) {
     return db.transaction(async (trx) => {
@@ -170,6 +178,7 @@ export const productService = {
         name: data.name,
         barcode: data.barcode,
         price: data.price !== undefined ? data.price.toString() : undefined,
+        isActive: data.isActive,
       };
       if (data.category !== undefined) {
         updateValues.categoryId = await findOrCreateCategoryId(
@@ -195,12 +204,25 @@ export const productService = {
   },
 
   async deleteProduct(productId: number) {
-    const [deleted] = await db
-      .delete(product)
-      .where(eq(product.productId, productId))
-      .returning();
-    if (!deleted) throw new Error("Product not found");
-    return deleted;
+    try {
+      const [deleted] = await db
+        .delete(product)
+        .where(eq(product.productId, productId))
+        .returning();
+      if (!deleted) throw new Error("Product not found");
+      return deleted;
+    } catch (err) {
+      // drizzle-orm wraps the real postgres error in DrizzleQueryError; the
+      // actual PostgresError (with .code) lives on .cause, not the top level
+      const code = (err as { cause?: { code?: string } }).cause?.code;
+      // 23503 = foreign_key_violation — this product has sale history or stock history rows
+      if (code === "23503") {
+        throw new Error(
+          "Cannot delete product — it has sale or stock history. Disable it instead.",
+        );
+      }
+      throw err;
+    }
   },
 
   async updateStock(

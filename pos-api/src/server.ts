@@ -5,6 +5,7 @@ import productRoutes from "./routes/product.routes";
 import saleRoutes from "./routes/sale.routes";
 import refundRoutes from "./routes/refund.routes";
 import promotionRoutes from "./routes/promotion.routes";
+import categoryRoutes from "./routes/category.routes";
 
 const app = Fastify({ logger: true });
 
@@ -13,6 +14,7 @@ app.register(productRoutes, { prefix: "/api/products" });
 app.register(saleRoutes, { prefix: "/api/sales" });
 app.register(refundRoutes, { prefix: "/api/refunds" });
 app.register(promotionRoutes, { prefix: "/api/promotions" });
+app.register(categoryRoutes, { prefix: "/api/categories" });
 
 const port = Number(process.env.PORT) || 3000;
 

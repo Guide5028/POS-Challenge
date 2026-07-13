@@ -7,6 +7,7 @@ export const createProductSchema = z.object({
   stockQuantity: z.number().int().min(0).default(0),
   costPrice: z.number().positive().optional(), // what you paid, for initial stock
   category: z.string().optional(),
+  isActive: z.boolean().optional(),
 });
 
 // updates can't touch stockQuantity directly — use /stock instead
@@ -28,4 +29,8 @@ export const listProductsQuerySchema = z.object({
   search: z.string().optional(),
   sortBy: z.enum(["name", "price", "stockQuantity"]).optional(),
   order: z.enum(["asc", "desc"]).optional(),
+  activeOnly: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
 });

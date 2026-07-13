@@ -40,6 +40,7 @@ export function ProductsPage() {
         category: category || undefined,
         sortBy,
         order,
+        activeOnly: true,
       });
       setProducts(data);
     } catch (err) {

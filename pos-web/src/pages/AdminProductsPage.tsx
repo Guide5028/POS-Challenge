@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { productsApi, ApiError } from "../lib/api";
-import type { Product, StockReason } from "../types";
+import { productsApi, categoriesApi, ApiError } from "../lib/api";
+import type { Category, Product, StockReason } from "../types";
 
 function money(n: number | string) {
   return `$${Number(n).toFixed(2)}`;
@@ -10,6 +10,7 @@ const emptyCreate = { name: "", barcode: "", price: "", stockQuantity: "0", cost
 
 export function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +31,12 @@ export function AdminProductsPage() {
     setLoading(true);
     setError(null);
     try {
-      setProducts(await productsApi.list());
+      const [productList, categoryList] = await Promise.all([
+        productsApi.list(),
+        categoriesApi.list(true),
+      ]);
+      setProducts(productList);
+      setCategories(categoryList);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to load products");
     } finally {
@@ -99,6 +105,15 @@ export function AdminProductsPage() {
       load();
     } catch (err) {
       alert(err instanceof ApiError ? err.message : "Failed to delete product");
+    }
+  }
+
+  async function toggleActive(p: Product) {
+    try {
+      await productsApi.update(p.productId, { isActive: !p.isActive });
+      load();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "Failed to update product");
     }
   }
 
@@ -180,11 +195,18 @@ export function AdminProductsPage() {
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">Category</label>
-          <input
+          <select
             value={createForm.category}
             onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
             className="w-32 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-          />
+          >
+            <option value="">— none —</option>
+            {categories.map((c) => (
+              <option key={c.categoryId} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </div>
         <button
           type="submit"
@@ -208,6 +230,7 @@ export function AdminProductsPage() {
                 <th className="px-4 py-2">Category</th>
                 <th className="px-4 py-2">Price</th>
                 <th className="px-4 py-2">Stock</th>
+                <th className="px-4 py-2">Active</th>
                 <th className="px-4 py-2"></th>
               </tr>
             </thead>
@@ -231,11 +254,18 @@ export function AdminProductsPage() {
                         />
                       </td>
                       <td className="px-4 py-2">
-                        <input
+                        <select
                           value={editForm.category}
                           onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                           className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
-                        />
+                        >
+                          <option value="">— none —</option>
+                          {categories.map((c) => (
+                            <option key={c.categoryId} value={c.name}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-4 py-2">
                         <input
@@ -247,6 +277,7 @@ export function AdminProductsPage() {
                         />
                       </td>
                       <td className="px-4 py-2 text-gray-500">{Number(p.stockQuantity)}</td>
+                      <td className="px-4 py-2 text-gray-500">{p.isActive ? "Active" : "Inactive"}</td>
                       <td className="space-x-2 px-4 py-2 text-right">
                         <button
                           onClick={() => saveEdit(p.productId)}
@@ -270,6 +301,16 @@ export function AdminProductsPage() {
                       <td className="px-4 py-2 text-gray-600">{p.category ?? "—"}</td>
                       <td className="px-4 py-2 text-gray-900">{money(p.price)}</td>
                       <td className="px-4 py-2 text-gray-600">{Number(p.stockQuantity)}</td>
+                      <td className="px-4 py-2">
+                        <button
+                          onClick={() => toggleActive(p)}
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            p.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {p.isActive ? "Active" : "Inactive"}
+                        </button>
+                      </td>
                       <td className="space-x-2 px-4 py-2 text-right">
                         <button
                           onClick={() => startEdit(p)}
@@ -297,7 +338,7 @@ export function AdminProductsPage() {
               {stockId !== null &&
                 products.some((p) => p.productId === stockId) && (
                   <tr className="border-t border-gray-100 bg-gray-50">
-                    <td colSpan={6} className="px-4 py-3">
+                    <td colSpan={7} className="px-4 py-3">
                       <div className="flex flex-wrap items-end gap-2">
                         <div>
                           <label className="mb-1 block text-xs font-medium text-gray-500">
@@ -349,7 +390,7 @@ export function AdminProductsPage() {
                 )}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
                     No products yet.
                   </td>
                 </tr>

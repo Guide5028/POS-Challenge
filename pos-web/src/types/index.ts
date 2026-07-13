@@ -13,6 +13,7 @@ export interface Product {
   barcode: string | null;
   price: string | number;
   category: string | null;
+  isActive: boolean;
   stockQuantity: string | number;
 }
 
@@ -68,6 +69,13 @@ export interface Refund {
   reason: string | null;
   refundedAt: string;
   employeeId: number;
+}
+
+export interface Category {
+  categoryId: number;
+  name: string;
+  description: string | null;
+  isActive: boolean;
 }
 
 export interface CartLine {

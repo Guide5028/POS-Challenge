@@ -1,5 +1,6 @@
 import { tokens } from "./tokens";
 import type {
+  Category,
   Product,
   Profile,
   Promotion,
@@ -100,6 +101,7 @@ export interface ListProductsParams {
   search?: string;
   sortBy?: "name" | "price" | "stockQuantity";
   order?: "asc" | "desc";
+  activeOnly?: boolean;
 }
 
 function toQuery(params: Record<string, string | undefined>): string {
@@ -116,6 +118,7 @@ export interface CreateProductInput {
   stockQuantity?: number;
   costPrice?: number;
   category?: string;
+  isActive?: boolean;
 }
 
 export interface UpdateProductInput {
@@ -123,11 +126,14 @@ export interface UpdateProductInput {
   barcode?: string;
   price?: number;
   category?: string;
+  isActive?: boolean;
 }
 
 export const productsApi = {
-  list: (params: ListProductsParams = {}) =>
-    get<Product[]>(`/products${toQuery(params)}`),
+  list: ({ activeOnly, ...params }: ListProductsParams = {}) =>
+    get<Product[]>(
+      `/products${toQuery({ ...params, activeOnly: activeOnly ? "true" : undefined })}`,
+    ),
   get: (id: number) => get<Product>(`/products/${id}`),
   getByBarcode: (barcode: string) =>
     get<Product>(`/products/barcode/${encodeURIComponent(barcode)}`),
@@ -179,6 +185,22 @@ export const promotionsApi = {
   update: (id: number, data: Partial<CreatePromotionInput>) =>
     put<Promotion>(`/promotions/${id}`, data),
   remove: (id: number) => del<{ message: string }>(`/promotions/${id}`),
+};
+
+export interface CreateCategoryInput {
+  name: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+export const categoriesApi = {
+  list: (activeOnly?: boolean) =>
+    get<Category[]>(`/categories${activeOnly ? "?activeOnly=true" : ""}`),
+  get: (id: number) => get<Category>(`/categories/${id}`),
+  create: (data: CreateCategoryInput) => post<Category>("/categories", data),
+  update: (id: number, data: Partial<CreateCategoryInput>) =>
+    put<Category>(`/categories/${id}`, data),
+  remove: (id: number) => del<{ message: string }>(`/categories/${id}`),
 };
 
 export const refundsApi = {

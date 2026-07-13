@@ -89,7 +89,9 @@ export const productController = {
       await productService.deleteProduct(id);
       return sendSuccess(reply, { message: "Product deleted successfully" });
     } catch (error) {
-      return sendError(reply, 404, (error as Error).message);
+      const message = (error as Error).message;
+      const status = message === "Product not found" ? 404 : 400;
+      return sendError(reply, status, message);
     }
   },
 
