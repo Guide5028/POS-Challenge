@@ -21,6 +21,16 @@ const createRefund = async (request: FastifyRequest, reply: FastifyReply) => {
   }
 };
 
+const getAllRefunds = async (_request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const refunds = await refundService.getAllRefunds();
+    return sendSuccess(reply, refunds);
+  } catch (error) {
+    return sendError(reply, 500, "Failed to fetch refunds");
+  }
+};
+
 export const refundController = {
   createRefund,
+  getAllRefunds,
 };

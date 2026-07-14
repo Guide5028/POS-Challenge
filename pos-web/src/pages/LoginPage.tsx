@@ -61,6 +61,28 @@ export function LoginPage() {
             {submitting ? "Signing in…" : "Sign in"}
           </button>
         </form>
+
+        <div className="my-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs text-gray-400">or</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <div className="space-y-2">
+          <a
+            href="/api/auth/google"
+            className="flex w-full items-center justify-center rounded-md border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Sign in with Google
+          </a>
+          <a
+            href="/api/auth/facebook"
+            className="flex w-full items-center justify-center rounded-md border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Sign in with Facebook
+          </a>
+        </div>
+
         <p className="mt-4 text-center text-sm text-gray-500">
           No account? <Link to="/register" className="text-brand-600 hover:underline">Register</Link>
         </p>

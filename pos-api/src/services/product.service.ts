@@ -61,6 +61,7 @@ export const productService = {
         price: product.price,
         category: category.name,
         isActive: product.isActive,
+        imageUrl: product.imageUrl,
         stockQuantity: sql<number>`coalesce(sum(${stockHistory.changeAmount}), 0)`,
       })
       .from(product)
@@ -89,6 +90,7 @@ export const productService = {
         price: product.price,
         category: category.name,
         isActive: product.isActive,
+        imageUrl: product.imageUrl,
       })
       .from(product)
       .leftJoin(category, eq(product.categoryId, category.categoryId))
@@ -109,6 +111,7 @@ export const productService = {
         price: product.price,
         category: category.name,
         isActive: product.isActive,
+        imageUrl: product.imageUrl,
       })
       .from(product)
       .leftJoin(category, eq(product.categoryId, category.categoryId))
@@ -224,6 +227,16 @@ export const productService = {
       }
       throw err;
     }
+  },
+
+  async updateProductImage(productId: number, imageUrl: string) {
+    const [updated] = await db
+      .update(product)
+      .set({ imageUrl })
+      .where(eq(product.productId, productId))
+      .returning();
+    if (!updated) throw new Error("Product not found");
+    return updated;
   },
 
   async updateStock(

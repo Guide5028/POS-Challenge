@@ -8,6 +8,8 @@ interface AuthState {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  loginWithTokens: (accessToken: string, refreshToken: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
   logout: () => void;
 }
 
@@ -40,6 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await login(email, password);
   }, [login]);
 
+  const loginWithTokens = useCallback(async (accessToken: string, refreshToken: string) => {
+    tokens.set(accessToken, refreshToken);
+    const profile = await authApi.profile();
+    setProfile(profile);
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    const profile = await authApi.profile();
+    setProfile(profile);
+  }, []);
+
   const logout = useCallback(() => {
     authApi.logout().catch(() => {});
     tokens.clear();
@@ -47,7 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ profile, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ profile, loading, login, register, loginWithTokens, refreshProfile, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

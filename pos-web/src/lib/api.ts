@@ -1,10 +1,12 @@
 import { tokens } from "./tokens";
 import type {
   Category,
+  Employee,
   Product,
   Profile,
   Promotion,
   Refund,
+  Role,
   Sale,
   StockReason,
   PaymentMethod,
@@ -72,6 +74,27 @@ async function request<T>(
   return body.data;
 }
 
+async function uploadFile<T>(path: string, file: File): Promise<T> {
+  const access = tokens.access;
+  const formData = new FormData();
+  formData.append("file", file);
+
+  // no Content-Type header here on purpose — the browser sets
+  // multipart/form-data with the correct boundary automatically
+  const res = await fetch(`/api${path}`, {
+    method: "POST",
+    headers: access ? { Authorization: `Bearer ${access}` } : undefined,
+    body: formData,
+  });
+
+  const body = (await res.json()) as Envelope<T>;
+  if (!res.ok || !body.success) {
+    const message = !body.success ? body.message : `Request failed (${res.status})`;
+    throw new ApiError(res.status, message);
+  }
+  return body.data;
+}
+
 const get = <T>(path: string) => request<T>(path, { method: "GET" });
 const post = <T>(path: string, data?: unknown) =>
   request<T>(path, { method: "POST", body: data !== undefined ? JSON.stringify(data) : undefined });
@@ -94,6 +117,7 @@ export const authApi = {
     post<Profile>("/auth/register", { email, password, name }),
   logout: () => post<{ message: string }>("/auth/logout"),
   profile: () => get<Profile>("/auth/profile"),
+  updateProfile: (name: string) => put<Profile>("/auth/profile", { name }),
 };
 
 export interface ListProductsParams {
@@ -148,6 +172,8 @@ export const productsApi = {
     costPrice?: number,
   ) =>
     patch<Product>(`/products/${id}/stock`, { changeAmount, reason, costPrice }),
+  uploadImage: (id: number, file: File) =>
+    uploadFile<Product>(`/products/${id}/image`, file),
 };
 
 export interface CreateSaleInput {
@@ -203,6 +229,12 @@ export const categoriesApi = {
   remove: (id: number) => del<{ message: string }>(`/categories/${id}`),
 };
 
+export const employeesApi = {
+  list: () => get<Employee[]>("/employees"),
+  update: (id: number, data: { isActive?: boolean; role?: Role }) =>
+    patch<Employee>(`/employees/${id}`, data),
+};
+
 export const refundsApi = {
   create: (data: {
     saleItemId: number;
@@ -210,4 +242,5 @@ export const refundsApi = {
     reason: string;
     employeeId: number;
   }) => post<Refund>("/refunds", data),
+  list: () => get<Refund[]>("/refunds"),
 };

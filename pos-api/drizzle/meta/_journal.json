@@ -29,6 +29,20 @@
       "when": 1783927769744,
       "tag": "0003_lucky_king_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783935247283,
+      "tag": "0004_new_stark_industries",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783938987682,
+      "tag": "0005_talented_titania",
+      "breakpoints": true
     }
   ]
 }

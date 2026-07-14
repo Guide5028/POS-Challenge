@@ -199,6 +199,17 @@ export function ProductsPage() {
                 key={p.productId}
                 className="flex flex-col rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
               >
+                {p.imageUrl ? (
+                  <img
+                    src={p.imageUrl}
+                    alt={p.name}
+                    className="mb-2 h-24 w-full rounded-md object-cover"
+                  />
+                ) : (
+                  <div className="mb-2 flex h-24 w-full items-center justify-center rounded-md bg-gray-100 text-xs text-gray-400">
+                    No image
+                  </div>
+                )}
                 <p className="text-sm font-semibold text-gray-900">{p.name}</p>
                 <p className="text-xs text-gray-500">{p.category ?? "Uncategorized"}</p>
                 <p className="mt-2 text-base font-bold text-gray-900">{money(p.price)}</p>

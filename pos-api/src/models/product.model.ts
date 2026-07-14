@@ -15,4 +15,5 @@ export const product = pgTable("product", {
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   categoryId: integer("category_id").references(() => category.categoryId),
   isActive: boolean("is_active").notNull().default(true),
+  imageUrl: varchar("image_url", { length: 500 }),
 });

@@ -3,17 +3,21 @@ import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { OAuthCallbackPage } from "./pages/OAuthCallbackPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { SalesPage } from "./pages/SalesPage";
 import { SaleDetailPage } from "./pages/SaleDetailPage";
 import { AdminProductsPage } from "./pages/AdminProductsPage";
 import { AdminPromotionsPage } from "./pages/AdminPromotionsPage";
+import { AdminEmployeesPage } from "./pages/AdminEmployeesPage";
+import { RefundsPage } from "./pages/RefundsPage";
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/oauth-callback" element={<OAuthCallbackPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
@@ -24,6 +28,8 @@ function App() {
             <Route path="/sales/:id" element={<SaleDetailPage />} />
             <Route path="/admin/products" element={<AdminProductsPage />} />
             <Route path="/admin/promotions" element={<AdminPromotionsPage />} />
+            <Route path="/admin/employees" element={<AdminEmployeesPage />} />
+            <Route path="/refunds" element={<RefundsPage />} />
           </Route>
         </Route>
       </Route>

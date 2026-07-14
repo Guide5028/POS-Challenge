@@ -1,7 +1,11 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { authService } from "../services/auth.service";
 import { sendSuccess, sendError } from "../utils/response";
-import { loginSchema, registerSchema } from "../schemas/auth.schemas";
+import {
+  loginSchema,
+  registerSchema,
+  updateProfileSchema,
+} from "../schemas/auth.schemas";
 
 export const authController = {
   login: async (request: FastifyRequest, reply: FastifyReply) => {
@@ -15,7 +19,7 @@ export const authController = {
       );
       return sendSuccess(reply, result);
     } catch (error) {
-      return sendError(reply, 401, "Wrong email or password");
+      return sendError(reply, 401, (error as Error).message || "Wrong email or password");
     }
   },
 
@@ -51,6 +55,21 @@ export const authController = {
     try {
       // request.user is set by the authenticate preHandler before this runs
       const profile = await authService.getProfile(request.user!.userId);
+      return sendSuccess(reply, profile);
+    } catch (error) {
+      return sendError(reply, 404, (error as Error).message);
+    }
+  },
+
+  updateProfile: async (request: FastifyRequest, reply: FastifyReply) => {
+    const parsed = updateProfileSchema.safeParse(request.body);
+    if (!parsed.success) return sendError(reply, 400, parsed.error.message);
+
+    try {
+      const profile = await authService.updateProfile(
+        request.user!.userId,
+        parsed.data.name,
+      );
       return sendSuccess(reply, profile);
     } catch (error) {
       return sendError(reply, 404, (error as Error).message);

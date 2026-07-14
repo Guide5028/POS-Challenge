@@ -40,6 +40,11 @@ const productRoutes = (app: FastifyInstance) => {
     { preHandler: [authenticate, requireRole(["admin"])] },
     productController.updateStock,
   );
+  app.post(
+    "/:id/image",
+    { preHandler: [authenticate, requireRole(["admin"])] },
+    productController.uploadImage,
+  );
 };
 
 export default productRoutes;

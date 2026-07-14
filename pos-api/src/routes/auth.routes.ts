@@ -12,6 +12,11 @@ const authRoutes = (app: FastifyInstance) => {
     { preHandler: [authenticate] },
     authController.getProfile,
   );
+  app.put(
+    "/profile",
+    { preHandler: [authenticate] },
+    authController.updateProfile,
+  );
 };
 
 export default authRoutes;

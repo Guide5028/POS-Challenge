@@ -27,6 +27,9 @@ export function AdminProductsPage() {
   const [stockCost, setStockCost] = useState("");
   const [stockError, setStockError] = useState<string | null>(null);
 
+  const [uploadingId, setUploadingId] = useState<number | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+
   async function load() {
     setLoading(true);
     setError(null);
@@ -105,6 +108,20 @@ export function AdminProductsPage() {
       load();
     } catch (err) {
       alert(err instanceof ApiError ? err.message : "Failed to delete product");
+    }
+  }
+
+  async function handleImageUpload(productId: number, file: File | undefined) {
+    if (!file) return;
+    setImageError(null);
+    setUploadingId(productId);
+    try {
+      await productsApi.uploadImage(productId, file);
+      load();
+    } catch (err) {
+      setImageError(err instanceof ApiError ? err.message : "Failed to upload image");
+    } finally {
+      setUploadingId(null);
     }
   }
 
@@ -219,12 +236,14 @@ export function AdminProductsPage() {
 
       {loading && <p className="text-sm text-gray-500">Loading…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
+      {imageError && <p className="mb-2 text-sm text-red-600">{imageError}</p>}
 
       {!loading && !error && (
         <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
+                <th className="px-4 py-2">Image</th>
                 <th className="px-4 py-2">Name</th>
                 <th className="px-4 py-2">Barcode</th>
                 <th className="px-4 py-2">Category</th>
@@ -237,6 +256,30 @@ export function AdminProductsPage() {
             <tbody>
               {products.map((p) => (
                 <tr key={p.productId} className="border-t border-gray-100 align-top">
+                  <td className="px-4 py-2">
+                    {p.imageUrl ? (
+                      <img
+                        src={p.imageUrl}
+                        alt={p.name}
+                        className="h-10 w-10 rounded-md border border-gray-200 object-cover"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-md border border-dashed border-gray-300" />
+                    )}
+                    <label
+                      htmlFor={`image-upload-${p.productId}`}
+                      className="mt-1 block cursor-pointer text-xs text-brand-600 hover:underline"
+                    >
+                      {uploadingId === p.productId ? "Uploading…" : "Upload"}
+                    </label>
+                    <input
+                      id={`image-upload-${p.productId}`}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(e) => handleImageUpload(p.productId, e.target.files?.[0])}
+                    />
+                  </td>
                   {editingId === p.productId ? (
                     <>
                       <td className="px-4 py-2">
@@ -338,7 +381,7 @@ export function AdminProductsPage() {
               {stockId !== null &&
                 products.some((p) => p.productId === stockId) && (
                   <tr className="border-t border-gray-100 bg-gray-50">
-                    <td colSpan={7} className="px-4 py-3">
+                    <td colSpan={8} className="px-4 py-3">
                       <div className="flex flex-wrap items-end gap-2">
                         <div>
                           <label className="mb-1 block text-xs font-medium text-gray-500">
@@ -390,7 +433,7 @@ export function AdminProductsPage() {
                 )}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-6 text-center text-gray-500">
                     No products yet.
                   </td>
                 </tr>

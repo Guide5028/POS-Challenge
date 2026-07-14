@@ -4,6 +4,7 @@ import { sale } from "../models/sale.model";
 import { saleItem } from "../models/saleItem.model";
 import { stockHistory } from "../models/stockHistory.model";
 import { product } from "../models/product.model";
+import { employee } from "../models/employee.model";
 import { promotionService, computeDiscountAmount } from "./promotion.service";
 
 type SaleItemInput = { productId: number; quantity: number };
@@ -17,6 +18,17 @@ export const saleService = {
     customerId?: number;
   }) {
     return db.transaction(async (trx) => {
+      const [employeeRow] = await trx
+        .select()
+        .from(employee)
+        .where(eq(employee.employeeId, data.employeeId));
+      if (!employeeRow) throw new Error("Employee not found");
+      if (!employeeRow.profileComplete) {
+        throw new Error(
+          "Please confirm your name in your profile before making a sale",
+        );
+      }
+
       // check each product exists, has enough stock, and if a promo applies
       const lineItems: {
         productRow: typeof product.$inferSelect;

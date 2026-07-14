@@ -5,6 +5,7 @@ export interface Profile {
   name: string;
   email: string;
   role: Role;
+  profileComplete: boolean;
 }
 
 export interface Product {
@@ -14,6 +15,7 @@ export interface Product {
   price: string | number;
   category: string | null;
   isActive: boolean;
+  imageUrl: string | null;
   stockQuantity: string | number;
 }
 
@@ -69,6 +71,9 @@ export interface Refund {
   reason: string | null;
   refundedAt: string;
   employeeId: number;
+  employeeName: string | null;
+  productId: number | null;
+  productName: string | null;
 }
 
 export interface Category {
@@ -76,6 +81,15 @@ export interface Category {
   name: string;
   description: string | null;
   isActive: boolean;
+}
+
+export interface Employee {
+  employeeId: number;
+  name: string;
+  email: string;
+  role: Role;
+  isActive: boolean;
+  profileComplete: boolean;
 }
 
 export interface CartLine {

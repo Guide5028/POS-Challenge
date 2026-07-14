@@ -1,8 +1,10 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { refund } from "../models/refund.model";
 import { saleItem } from "../models/saleItem.model";
 import { stockHistory } from "../models/stockHistory.model";
+import { product } from "../models/product.model";
+import { employee } from "../models/employee.model";
 
 export const refundService = {
   async createRefund(
@@ -46,5 +48,26 @@ export const refundService = {
 
       return createdRefund;
     });
+  },
+
+  async getAllRefunds() {
+    return db
+      .select({
+        refundId: refund.refundId,
+        saleItemId: refund.saleItemId,
+        saleId: refund.saleId,
+        quantity: refund.quantity,
+        reason: refund.reason,
+        refundedAt: refund.refundedAt,
+        employeeId: refund.employeeId,
+        employeeName: employee.name,
+        productId: saleItem.productId,
+        productName: product.name,
+      })
+      .from(refund)
+      .leftJoin(saleItem, eq(refund.saleItemId, saleItem.saleItemId))
+      .leftJoin(product, eq(saleItem.productId, product.productId))
+      .leftJoin(employee, eq(refund.employeeId, employee.employeeId))
+      .orderBy(desc(refund.refundedAt));
   },
 };

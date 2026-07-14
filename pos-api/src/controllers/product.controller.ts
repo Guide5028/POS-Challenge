@@ -1,12 +1,15 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { productService } from "../services/product.service";
 import { sendSuccess, sendError } from "../utils/response";
+import { uploadProductImage } from "../utils/storage";
 import {
   createProductSchema,
   updateProductSchema,
   updateStockSchema,
   listProductsQuerySchema,
 } from "../schemas/product.schemas";
+
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 // params.id is always a string — bail out early with a clean 400 if it's
 function parseId(request: FastifyRequest, reply: FastifyReply): number | null {
@@ -109,6 +112,26 @@ export const productController = {
         parsed.data.reason,
         parsed.data.costPrice,
       );
+      return sendSuccess(reply, updated);
+    } catch (error) {
+      return sendError(reply, 400, (error as Error).message);
+    }
+  },
+
+  uploadImage: async (request: FastifyRequest, reply: FastifyReply) => {
+    const id = parseId(request, reply);
+    if (id === null) return;
+
+    const file = await request.file();
+    if (!file) return sendError(reply, 400, "No file uploaded");
+    if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+      return sendError(reply, 400, "Only JPEG, PNG, or WebP images are allowed");
+    }
+
+    try {
+      const buffer = await file.toBuffer();
+      const imageUrl = await uploadProductImage(id, buffer, file.mimetype, file.filename);
+      const updated = await productService.updateProductImage(id, imageUrl);
       return sendSuccess(reply, updated);
     } catch (error) {
       return sendError(reply, 400, (error as Error).message);
