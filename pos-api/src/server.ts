@@ -1,5 +1,6 @@
 import "dotenv/config";
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import authRoutes from "./routes/auth.routes";
 import productRoutes from "./routes/product.routes";
@@ -11,6 +12,15 @@ import oauthRoutes from "./routes/oauth.routes";
 import employeeRoutes from "./routes/employee.routes";
 
 const app = Fastify({ logger: true });
+
+// Real (production-shape) CORS -- the frontend calls this API's actual URL directly,
+// no dev proxy in between. Auth is a Bearer token in the Authorization header, not a
+// cookie, so `credentials: true` isn't needed here -- add it only if this ever moves
+// to httpOnly-cookie auth, and then FRONTEND_URL must stay a single exact origin
+// (can't be "*") for the browser to accept it.
+app.register(cors, {
+  origin: process.env.FRONTEND_URL,
+});
 
 app.register(multipart, {
   limits: { fileSize: 5 * 1024 * 1024 }, // matches the storage bucket's own 5MB limit
