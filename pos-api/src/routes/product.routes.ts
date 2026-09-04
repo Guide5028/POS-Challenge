@@ -4,16 +4,8 @@ import { authenticate } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/role.middleware";
 
 const productRoutes = (app: FastifyInstance) => {
-  app.get(
-    "/",
-    { preHandler: [authenticate] },
-    productController.getAllProducts,
-  );
-  app.get(
-    "/:id",
-    { preHandler: [authenticate] },
-    productController.getProductById,
-  );
+  app.get("/", productController.getAllProducts);
+  app.get("/:id", productController.getProductById);
   // scanner-friendly lookup — exact barcode match, used at checkout
   app.get(
     "/barcode/:barcode",

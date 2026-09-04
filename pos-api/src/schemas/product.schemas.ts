@@ -8,6 +8,14 @@ export const createProductSchema = z.object({
   costPrice: z.number().positive().optional(), // what you paid, for initial stock
   category: z.string().optional(),
   isActive: z.boolean().optional(),
+  // storefront-only display fields
+  description: z.string().optional(),
+  priceOld: z.number().positive().optional(),
+  badge: z.enum(["new", "sale"]).optional(),
+  sku: z.string().optional(),
+  weight: z.string().optional(),
+  dimensions: z.string().optional(),
+  material: z.string().optional(),
 });
 
 // updates can't touch stockQuantity directly — use /stock instead
@@ -33,4 +41,6 @@ export const listProductsQuerySchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 });

@@ -65,7 +65,9 @@ export const productController = {
       const created = await productService.createProduct(parsed.data);
       return sendSuccess(reply, created, 201);
     } catch (error) {
-      return sendError(reply, 500, "Failed to create product");
+      // e.g. "A product with this barcode/SKU already exists" (unique constraint)
+      const message = (error as Error).message || "Failed to create product";
+      return sendError(reply, 400, message);
     }
   },
 
@@ -80,7 +82,9 @@ export const productController = {
       const updated = await productService.updateProduct(id, parsed.data);
       return sendSuccess(reply, updated);
     } catch (error) {
-      return sendError(reply, 404, (error as Error).message);
+      const message = (error as Error).message;
+      const status = message === "Product not found" ? 404 : 400;
+      return sendError(reply, status, message);
     }
   },
 

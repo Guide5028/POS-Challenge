@@ -10,7 +10,25 @@ type ListParams = {
   sortBy?: "name" | "price" | "stockQuantity";
   order?: "asc" | "desc";
   activeOnly?: boolean;
+  page?: number;
+  limit?: number;
 };
+
+// drizzle-orm wraps the real postgres error in DrizzleQueryError; the actual
+// PostgresError (with .code and .constraint) lives on .cause, not the top level.
+// Without this, a duplicate barcode or sku (both unique columns on product) fell
+// all the way through the controller's generic catch as an opaque 500 instead of
+// a message that actually says what's wrong -- same class of bug deleteProduct's
+// own catch below already handles for foreign-key violations.
+function translateProductError(err: unknown): Error {
+  const cause = (err as { cause?: { code?: string; constraint?: string } }).cause;
+  // 23505 = unique_violation
+  if (cause?.code === "23505") {
+    const field = cause.constraint?.includes("barcode") ? "barcode" : "SKU";
+    return new Error(`A product with this ${field} already exists`);
+  }
+  return err as Error;
+}
 
 // sums stock_history for a product to get its current quantity
 async function getCurrentStock(
@@ -62,6 +80,13 @@ export const productService = {
         category: category.name,
         isActive: product.isActive,
         imageUrl: product.imageUrl,
+        description: product.description,
+        priceOld: product.priceOld,
+        badge: product.badge,
+        sku: product.sku,
+        weight: product.weight,
+        dimensions: product.dimensions,
+        material: product.material,
         stockQuantity: sql<number>`coalesce(sum(${stockHistory.changeAmount}), 0)`,
       })
       .from(product)
@@ -73,12 +98,25 @@ export const productService = {
     // default sort: name ascending
     const field = params.sortBy ?? "name";
     const dir = params.order === "desc" ? -1 : 1;
-    return rows.slice().sort((a, b) => {
+    const sorted = rows.slice().sort((a, b) => {
       if (field === "name") return a.name.localeCompare(b.name) * dir;
       const av = field === "price" ? Number(a.price) : Number(a.stockQuantity);
       const bv = field === "price" ? Number(b.price) : Number(b.stockQuantity);
       return (av - bv) * dir;
     });
+
+    // paginated in JS, same as the sort above -- stockQuantity is a computed
+    // aggregate, not a real column, so this list is already built in memory
+    // before pagination can slice it
+    const page = params.page ?? 1;
+    const limit = params.limit ?? 20;
+    const start = (page - 1) * limit;
+    return {
+      items: sorted.slice(start, start + limit),
+      total: sorted.length,
+      page,
+      limit,
+    };
   },
 
   async getProductById(productId: number) {
@@ -91,6 +129,13 @@ export const productService = {
         category: category.name,
         isActive: product.isActive,
         imageUrl: product.imageUrl,
+        description: product.description,
+        priceOld: product.priceOld,
+        badge: product.badge,
+        sku: product.sku,
+        weight: product.weight,
+        dimensions: product.dimensions,
+        material: product.material,
       })
       .from(product)
       .leftJoin(category, eq(product.categoryId, category.categoryId))
@@ -131,40 +176,58 @@ export const productService = {
     stockQuantity?: number;
     costPrice?: number;
     isActive?: boolean;
+    description?: string;
+    priceOld?: number;
+    badge?: string;
+    sku?: string;
+    weight?: string;
+    dimensions?: string;
+    material?: string;
   }) {
-    return db.transaction(async (trx) => {
-      const categoryId = data.category
-        ? await findOrCreateCategoryId(trx, data.category)
-        : undefined;
+    try {
+      return await db.transaction(async (trx) => {
+        const categoryId = data.category
+          ? await findOrCreateCategoryId(trx, data.category)
+          : undefined;
 
-      const [created] = await trx
-        .insert(product)
-        .values({
-          name: data.name,
-          barcode: data.barcode,
-          price: data.price.toString(),
-          categoryId,
-          isActive: data.isActive ?? true,
-        })
-        .returning();
+        const [created] = await trx
+          .insert(product)
+          .values({
+            name: data.name,
+            barcode: data.barcode,
+            price: data.price.toString(),
+            categoryId,
+            isActive: data.isActive ?? true,
+            description: data.description,
+            priceOld: data.priceOld?.toString(),
+            badge: data.badge,
+            sku: data.sku,
+            weight: data.weight,
+            dimensions: data.dimensions,
+            material: data.material,
+          })
+          .returning();
 
-      // starting stock, if any, goes into stock_history like everything else
-      const initialStock = data.stockQuantity ?? 0;
-      if (initialStock > 0) {
-        await trx.insert(stockHistory).values({
-          productId: created.productId,
-          changeAmount: initialStock,
-          reason: "restock",
-          costPrice: data.costPrice?.toString(),
-        });
-      }
+        // starting stock, if any, goes into stock_history like everything else
+        const initialStock = data.stockQuantity ?? 0;
+        if (initialStock > 0) {
+          await trx.insert(stockHistory).values({
+            productId: created.productId,
+            changeAmount: initialStock,
+            reason: "restock",
+            costPrice: data.costPrice?.toString(),
+          });
+        }
 
-      return {
-        ...created,
-        category: data.category ?? null,
-        stockQuantity: initialStock,
-      };
-    });
+        return {
+          ...created,
+          category: data.category ?? null,
+          stockQuantity: initialStock,
+        };
+      });
+    } catch (err) {
+      throw translateProductError(err);
+    }
   },
 
   async updateProduct(
@@ -175,36 +238,56 @@ export const productService = {
       price: number;
       category: string;
       isActive: boolean;
+      description: string;
+      priceOld: number;
+      badge: string;
+      sku: string;
+      weight: string;
+      dimensions: string;
+      material: string;
     }>,
   ) {
-    return db.transaction(async (trx) => {
-      const updateValues: Record<string, unknown> = {
-        name: data.name,
-        barcode: data.barcode,
-        price: data.price !== undefined ? data.price.toString() : undefined,
-        isActive: data.isActive,
-      };
-      if (data.category !== undefined) {
-        updateValues.categoryId = await findOrCreateCategoryId(
-          trx,
-          data.category,
+    try {
+      return await db.transaction(async (trx) => {
+        const updateValues: Record<string, unknown> = {
+          name: data.name,
+          barcode: data.barcode,
+          price: data.price !== undefined ? data.price.toString() : undefined,
+          isActive: data.isActive,
+          description: data.description,
+          priceOld:
+            data.priceOld !== undefined ? data.priceOld.toString() : undefined,
+          badge: data.badge,
+          sku: data.sku,
+          weight: data.weight,
+          dimensions: data.dimensions,
+          material: data.material,
+        };
+        if (data.category !== undefined) {
+          updateValues.categoryId = await findOrCreateCategoryId(
+            trx,
+            data.category,
+          );
+        }
+        // strip undefined keys so we don't overwrite fields that weren't sent
+        Object.keys(updateValues).forEach(
+          (k) => updateValues[k] === undefined && delete updateValues[k],
         );
-      }
-      // strip undefined keys so we don't overwrite fields that weren't sent
-      Object.keys(updateValues).forEach(
-        (k) => updateValues[k] === undefined && delete updateValues[k],
-      );
 
-      const [updated] = await trx
-        .update(product)
-        .set(updateValues)
-        .where(eq(product.productId, productId))
-        .returning();
-      if (!updated) throw new Error("Product not found");
+        const [updated] = await trx
+          .update(product)
+          .set(updateValues)
+          .where(eq(product.productId, productId))
+          .returning();
+        if (!updated) throw new Error("Product not found");
 
-      const stockQuantity = await getCurrentStock(trx, productId);
-      return { ...updated, category: data.category ?? null, stockQuantity };
-    });
+        const stockQuantity = await getCurrentStock(trx, productId);
+        return { ...updated, category: data.category ?? null, stockQuantity };
+      });
+    } catch (err) {
+      if ((err as Error).message === "Product not found") throw err;
+      throw translateProductError(err);
+    }
   },
 
   async deleteProduct(productId: number) {

@@ -45,7 +45,10 @@ export const categoryController = {
       const created = await categoryService.createCategory(parsed.data);
       return sendSuccess(reply, created, 201);
     } catch (error) {
-      return sendError(reply, 500, "Failed to create category");
+      // e.g. "A category with this name already exists" (unique constraint) --
+      // same "not found is 404, everything else is 400" split as deleteCategory below.
+      const message = (error as Error).message || "Failed to create category";
+      return sendError(reply, 400, message);
     }
   },
 
@@ -60,7 +63,9 @@ export const categoryController = {
       const updated = await categoryService.updateCategory(id, parsed.data);
       return sendSuccess(reply, updated);
     } catch (error) {
-      return sendError(reply, 404, (error as Error).message);
+      const message = (error as Error).message;
+      const status = message === "Category not found" ? 404 : 400;
+      return sendError(reply, status, message);
     }
   },
 

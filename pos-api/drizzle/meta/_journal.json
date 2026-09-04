@@ -43,6 +43,13 @@
       "when": 1783938987682,
       "tag": "0005_talented_titania",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788496657800,
+      "tag": "0006_tranquil_magik",
+      "breakpoints": true
     }
   ]
 }

@@ -18,8 +18,14 @@ const app = Fastify({ logger: true });
 // cookie, so `credentials: true` isn't needed here -- add it only if this ever moves
 // to httpOnly-cookie auth, and then FRONTEND_URL must stay a single exact origin
 // (can't be "*") for the browser to accept it.
+//
+// @fastify/cors defaults `methods` to just 'GET,HEAD,POST' -- routes/*.ts use all five
+// verbs (app.put/patch/delete besides get/post), so without this the browser's preflight
+// blocks every PUT/PATCH/DELETE call (e.g. PATCH /employees/:id) before it ever reaches
+// the route, even though the route itself is registered and works fine from curl/Postman.
 app.register(cors, {
   origin: process.env.FRONTEND_URL,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
 });
 
 app.register(multipart, {
