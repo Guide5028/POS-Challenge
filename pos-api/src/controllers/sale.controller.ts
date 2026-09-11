@@ -30,4 +30,11 @@ export const saleController = {
       return sendError(reply, 404, (error as Error).message);
     }
   },
+
+  // The signed-in customer's own orders -- request.user.userId is their customerId
+  // (see role.middleware's requireRole(["customer"]) gate on this route).
+  getMySales: async (request: FastifyRequest, reply: FastifyReply) => {
+    const sales = await saleService.getSalesForCustomer(request.user!.userId);
+    return sendSuccess(reply, sales);
+  },
 };

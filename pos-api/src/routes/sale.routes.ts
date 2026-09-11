@@ -11,6 +11,11 @@ const saleRoutes = (app: FastifyInstance) => {
     saleController.getAllSales,
   );
   app.get(
+    "/mine",
+    { preHandler: [authenticate, requireRole(["customer"])] },
+    saleController.getMySales,
+  );
+  app.get(
     "/:id",
     { preHandler: [authenticate, requireRole(["admin"])] },
     saleController.getSaleById,

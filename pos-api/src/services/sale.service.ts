@@ -1,4 +1,4 @@
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, inArray } from "drizzle-orm";
 import { db } from "../db/client";
 import { sale } from "../models/sale.model";
 import { saleItem } from "../models/saleItem.model";
@@ -139,5 +139,35 @@ export const saleService = {
       .from(saleItem)
       .where(eq(saleItem.saleId, saleId));
     return { ...found, items };
+  },
+
+  // A customer's own order history (My Account page) -- items are joined in eagerly
+  // (product name/image) so the frontend doesn't need a second admin-gated call per order.
+  async getSalesForCustomer(customerId: number) {
+    const sales = await db
+      .select()
+      .from(sale)
+      .where(eq(sale.customerId, customerId))
+      .orderBy(desc(sale.createdAt));
+    if (sales.length === 0) return [];
+
+    const items = await db
+      .select({
+        saleId: saleItem.saleId,
+        productId: saleItem.productId,
+        quantity: saleItem.quantity,
+        unitPrice: saleItem.unitPrice,
+        discountAmount: saleItem.discountAmount,
+        productName: product.name,
+        imageUrl: product.imageUrl,
+      })
+      .from(saleItem)
+      .innerJoin(product, eq(saleItem.productId, product.productId))
+      .where(inArray(saleItem.saleId, sales.map((s) => s.saleId)));
+
+    return sales.map((s) => ({
+      ...s,
+      items: items.filter((i) => i.saleId === s.saleId),
+    }));
   },
 };
