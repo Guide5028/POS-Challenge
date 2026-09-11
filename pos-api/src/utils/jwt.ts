@@ -10,7 +10,9 @@ if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
 export interface TokenPayload {
   userId: number;
   email: string;
-  role: "admin" | "cashier";
+  // "customer" tokens are issued from the separate /customers/login, not /auth/login --
+  // they never satisfy requireRole([...]) for staff-only routes, which is intentional
+  role: "admin" | "cashier" | "customer";
   sessionId: string;
 }
 

@@ -10,6 +10,7 @@ import promotionRoutes from "./routes/promotion.routes";
 import categoryRoutes from "./routes/category.routes";
 import oauthRoutes from "./routes/oauth.routes";
 import employeeRoutes from "./routes/employee.routes";
+import customerRoutes from "./routes/customer.routes";
 
 const app = Fastify({ logger: true });
 
@@ -40,6 +41,7 @@ app.register(refundRoutes, { prefix: "/api/refunds" });
 app.register(promotionRoutes, { prefix: "/api/promotions" });
 app.register(categoryRoutes, { prefix: "/api/categories" });
 app.register(employeeRoutes, { prefix: "/api/employees" });
+app.register(customerRoutes, { prefix: "/api/customers" });
 
 const port = Number(process.env.PORT) || 3000;
 

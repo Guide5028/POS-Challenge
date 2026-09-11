@@ -50,6 +50,20 @@
       "when": 1788496657800,
       "tag": "0006_tranquil_magik",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788772118574,
+      "tag": "0007_normal_firedrake",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789102109513,
+      "tag": "0008_ambitious_the_initiative",
+      "breakpoints": true
     }
   ]
 }
