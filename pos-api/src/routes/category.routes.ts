@@ -3,18 +3,12 @@ import { categoryController } from "../controllers/category.controller";
 import { authenticate } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/role.middleware";
 
-// same split as products/promotions — anyone logged in can browse, only admins can edit
+// public reads (same as /products) -- the storefront needs category names for
+// anonymous shoppers (shop filters, promotion previews) before they ever log in;
+// only admins can create/edit/delete
 const categoryRoutes = (app: FastifyInstance) => {
-  app.get(
-    "/",
-    { preHandler: [authenticate] },
-    categoryController.getAllCategories,
-  );
-  app.get(
-    "/:id",
-    { preHandler: [authenticate] },
-    categoryController.getCategoryById,
-  );
+  app.get("/", categoryController.getAllCategories);
+  app.get("/:id", categoryController.getCategoryById);
   app.post(
     "/",
     { preHandler: [authenticate, requireRole(["admin"])] },
