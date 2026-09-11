@@ -327,6 +327,7 @@ export const productService = {
     changeAmount: number,
     reason: string,
     costPrice?: number,
+    employeeId?: number,
   ) {
     return db.transaction(async (trx) => {
       const [current] = await trx
@@ -344,6 +345,7 @@ export const productService = {
         changeAmount,
         reason,
         costPrice: costPrice?.toString(),
+        employeeId,
       });
 
       return { ...current, stockQuantity: newQuantity };

@@ -1,0 +1,2 @@
+ALTER TABLE "stock_history" ADD COLUMN "employee_id" integer;--> statement-breakpoint
+ALTER TABLE "stock_history" ADD CONSTRAINT "stock_history_employee_id_employee_employee_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employee"("employee_id") ON DELETE no action ON UPDATE no action;

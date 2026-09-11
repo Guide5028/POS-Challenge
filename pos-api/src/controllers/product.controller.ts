@@ -115,6 +115,7 @@ export const productController = {
         parsed.data.changeAmount,
         parsed.data.reason,
         parsed.data.costPrice,
+        request.user!.userId, // who did this -- from the verified JWT, never from the request body
       );
       return sendSuccess(reply, updated);
     } catch (error) {
