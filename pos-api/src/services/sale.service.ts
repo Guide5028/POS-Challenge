@@ -126,8 +126,22 @@ export const saleService = {
     });
   },
 
+  // Eager-loads each sale's line items in one extra query (not one per sale) --
+  // the admin dashboard used to call getSaleById per sale to build "Top selling
+  // products", which meant N+1 requests (1 + one per order).
   async getAllSales() {
-    return db.select().from(sale).orderBy(desc(sale.createdAt));
+    const sales = await db.select().from(sale).orderBy(desc(sale.createdAt));
+    if (sales.length === 0) return [];
+
+    const items = await db
+      .select()
+      .from(saleItem)
+      .where(inArray(saleItem.saleId, sales.map((s) => s.saleId)));
+
+    return sales.map((s) => ({
+      ...s,
+      items: items.filter((i) => i.saleId === s.saleId),
+    }));
   },
 
   async getSaleById(saleId: number) {
